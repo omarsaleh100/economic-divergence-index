@@ -4,21 +4,22 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-# --- 1. CONFIGURATION ---
-COLOR_RED = "#FF412C"  # Updated Red
-COLOR_GREY = "#959595" # Standard Grey
+# 1. CONFIGURATION: Red matches the YouGov logo color
+COLOR_RED = "#FF412C"
+COLOR_GREY = "#959595"
 
+# Timeframe - will cut off before government shutdown
 start_date = "2023-01-01"
 end_date = "2025-12-01"
 
 print("Fetching real-time data...")
 
-# --- 2. DATA FETCH & PREP ---
-afrm = yf.download("AFRM", start=start_date, end=end_date)
+# 2. DATA FETCH & PREP: Real time data fetched from yfinance and Fed Reserve Public API.
+afrm = yf.download("AFRM", start=start_date, end=end_date) # Affirm stock price
 afrm_clean = afrm['Close'].reset_index()
 afrm_clean.columns = ['Date', 'AFRM_Price']
 
-savings = web.DataReader('PSAVERT', 'fred', start_date, end_date).reset_index()
+savings = web.DataReader('PSAVERT', 'fred', start_date, end_date).reset_index() # Personal savings rate 
 savings.columns = ['Date', 'Savings_Rate']
 
 # Sync Data (Forward fill monthly savings to daily)
@@ -27,24 +28,22 @@ df = pd.merge(afrm_clean, savings_daily, on='Date', how='inner')
 
 correlation = df['AFRM_Price'].corr(df['Savings_Rate'])
 
-# --- 3. VISUALIZATION ---
-
+# 3. VISUALIZATION: Tried to match the YouGov chart with the constraints of plotly
 fig = make_subplots(specs=[[{"secondary_y": True}]])
 
-# Trace 1: Savings (Grey Line, Grey Text)
+# Trace 1: Savings
 fig.add_trace(
     go.Scatter(
         x=df['Date'], y=df['Savings_Rate'],
         name="Personal Savings Rate (%)",
         mode='lines',
         line=dict(color=COLOR_GREY, width=3),
-        # HTML styling to force the text color to match the line
         hovertemplate=f"<span style='color:{COLOR_GREY}; font-size:16px; font-weight:bold'>%{{y:.1f}}%</span><extra></extra>"
     ),
     secondary_y=False,
 )
 
-# Trace 2: Affirm Stock (Red Line, Red Text)
+# Trace 2: Affirm Stock
 fig.add_trace(
     go.Scatter(
         x=df['Date'], y=df['AFRM_Price'],
@@ -57,7 +56,7 @@ fig.add_trace(
     secondary_y=True,
 )
 
-# --- 4. LAYOUT & HOVER LOGIC ---
+# 4. LAYOUT & HOVER
 
 fig.update_layout(
     title=dict(
@@ -67,15 +66,14 @@ fig.update_layout(
     ),
     plot_bgcolor='white',
     
-    # "x" mode keeps tooltips separate so they float near their lines
+    # "x" mode keeps tooltips separate so they float near their lines, like how YouGov has it.
     hovermode="x", 
-    
-    # Global hover label settings (White background so colored text pops)
+
     hoverlabel=dict(
         bgcolor="white",      
         font_size=14, 
         font_family="Arial",
-        bordercolor="#black" # Very subtle border
+        bordercolor="#black"
     ),
     
     legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
@@ -91,7 +89,7 @@ fig.add_annotation(
     font=dict(size=12, color="black")
 )
 
-# Axis 1: Savings (Grey)
+# Axis 1: Savings
 s_min, s_max = df['Savings_Rate'].min(), df['Savings_Rate'].max()
 fig.update_yaxes(
     title_text="Savings Rate (%)",
@@ -102,7 +100,7 @@ fig.update_yaxes(
     showgrid=True, gridcolor='rgba(0,0,0,0.05)'
 )
 
-# Axis 2: Affirm (Red)
+# Axis 2: Affirm
 fig.update_yaxes(
     title_text="Affirm Share Price ($)",
     title_font=dict(color=COLOR_RED),
@@ -111,7 +109,7 @@ fig.update_yaxes(
     showgrid=False
 )
 
-# Timeline Cursor (Dotted Line)
+# Timeline Cursor
 fig.update_xaxes(
     title_text="Timeline (Sync Data)",
     showgrid=False,
